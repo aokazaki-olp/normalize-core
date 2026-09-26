@@ -3,7 +3,7 @@ import { it } from 'node:test';
 
 import { HORIZONTAL_BAR } from '../../src/domain/horizontalBar.ts';
 
-// NJA v3.1.3 の src/lib/normalizeHelpers.ts の文字クラス。NJA を上げたらここで差分を見る
+// NJA v3.1.3 の src/lib/normalizeHelpers.ts の文字クラス
 const NJA_HORIZONTAL_BAR = [
   0x002d, 0xff0d, 0xfe63, 0x2212, 0x2010, 0x2043, 0x2011, 0x2012, 0x2013,
   0x2014, 0xfe58, 0x2015, 0x23af, 0x23e4, 0x30fc, 0xff70, 0x2500, 0x2501,

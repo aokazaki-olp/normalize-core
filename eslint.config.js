@@ -7,8 +7,10 @@ import tseslint from 'typescript-eslint';
 const TS_FILES = ['**/*.ts', '**/*.mts'];
 const JS_FILES = ['**/*.js', '**/*.mjs'];
 const TEST_FILES = ['tests/**/*.ts', 'tests/**/*.mts'];
+const SRC_TS_FILES = ['src/**/*.ts', 'src/**/*.mts'];
 
 const RELATIVE_JS = '^\\.{1,2}/.*\\.m?js$';
+const NOT_RELATIVE = '^(?!\\.{1,2}/)';
 
 const syntaxRules = {
   curly: ['error', 'all'],
@@ -114,21 +116,21 @@ export default defineConfig(
   },
 
   {
-    files: ['src/**/*.ts', 'src/**/*.mts'],
+    files: SRC_TS_FILES,
     rules: {
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             RELATIVE_JS_IMPORT,
-            { regex: '^(?!\\.{1,2}/)', message: EXTERNAL_MESSAGE },
+            { regex: NOT_RELATIVE, message: EXTERNAL_MESSAGE },
           ],
         },
       ],
       'no-restricted-syntax': [
         ...tsRestrictedSyntax,
         {
-          selector: 'ImportExpression > Literal[value=/^(?!\\.)/]',
+          selector: `ImportExpression > Literal[value=/${NOT_RELATIVE.replaceAll('/', '\\/')}/]`,
           message: EXTERNAL_MESSAGE,
         },
       ],

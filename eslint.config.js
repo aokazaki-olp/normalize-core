@@ -39,6 +39,27 @@ const syntaxRules = {
   ],
 };
 
+const RELATIVE_JS_IMPORT = {
+  regex: RELATIVE_JS,
+  message: '相対 import には実ファイルの拡張子を書く（規約 §2.2）',
+};
+
+const tsRestrictedSyntax = [
+  ...syntaxRules['no-restricted-syntax'],
+  {
+    selector: `ImportExpression > Literal[value=/${RELATIVE_JS.replaceAll('/', '\\/')}/]`,
+    message: RELATIVE_JS_IMPORT.message,
+  },
+  {
+    selector: 'ImportExpression > TemplateLiteral',
+    message:
+      '動的 import の指定子はリテラルで書く（規約 §2.2 の検査を効かせるため）',
+  },
+];
+
+const EXTERNAL_MESSAGE =
+  'src/ からは相対パス以外を import しない（docs/design.md）';
+
 export default defineConfig(
   { ignores: ['dist/'] },
 
@@ -63,29 +84,8 @@ export default defineConfig(
     },
     rules: {
       ...syntaxRules,
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              regex: RELATIVE_JS,
-              message: '相対 import には実ファイルの拡張子を書く（規約 §2.2）',
-            },
-          ],
-        },
-      ],
-      'no-restricted-syntax': [
-        ...syntaxRules['no-restricted-syntax'],
-        {
-          selector: `ImportExpression > Literal[value=/${RELATIVE_JS.replaceAll('/', '\\/')}/]`,
-          message: '相対 import には実ファイルの拡張子を書く（規約 §2.2）',
-        },
-        {
-          selector: 'ImportExpression > TemplateLiteral',
-          message:
-            '動的 import の指定子はリテラルで書く（規約 §2.2 の検査を効かせるため）',
-        },
-      ],
+      'no-restricted-imports': ['error', { patterns: [RELATIVE_JS_IMPORT] }],
+      'no-restricted-syntax': tsRestrictedSyntax,
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/explicit-module-boundary-types': 'error',
       '@typescript-eslint/no-unused-vars': [
@@ -108,6 +108,28 @@ export default defineConfig(
               name: ['describe', 'it', 'test', 'suite'],
             },
           ],
+        },
+      ],
+    },
+  },
+
+  {
+    files: ['src/**/*.ts', 'src/**/*.mts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            RELATIVE_JS_IMPORT,
+            { regex: '^(?!\\.{1,2}/)', message: EXTERNAL_MESSAGE },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        ...tsRestrictedSyntax,
+        {
+          selector: 'ImportExpression > Literal[value=/^(?!\\.)/]',
+          message: EXTERNAL_MESSAGE,
         },
       ],
     },

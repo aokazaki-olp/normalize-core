@@ -7,7 +7,7 @@
 ```
 src/
   index.ts    公開面
-  domain/     ガード付き NFKC と、その横棒の集合
+  domain/     ガード付き NFKC と、それが判定に使う横棒の集合（住所に固有。下記）
 ```
 
 - 依存は `index.ts` → `domain` の一方向

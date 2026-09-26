@@ -51,9 +51,9 @@ const tsRestrictedSyntax = [
     message: RELATIVE_JS_IMPORT.message,
   },
   {
-    selector: 'ImportExpression > TemplateLiteral',
+    selector: 'ImportExpression > :not(Literal).source',
     message:
-      '動的 import の指定子はリテラルで書く（規約 §2.2 の検査を効かせるため）',
+      '動的 import の指定子は文字列リテラルで書く（規約 §2.2 の検査を効かせるため）',
   },
 ];
 

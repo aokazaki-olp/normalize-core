@@ -112,7 +112,7 @@ describe('guardedNfkc', () => {
     });
 
     it('サロゲートペアを1文字として扱う', () => {
-      assert.equal(guardedNfkc(u(0x2f800)), u(0x4e3d));
+      assert.equal(guardedNfkc(u(0x1d400)), 'A');
     });
 
     it('対になっていないサロゲートはそのまま', () => {

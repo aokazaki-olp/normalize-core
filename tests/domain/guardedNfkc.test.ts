@@ -2,12 +2,11 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { guardedNfkc } from '../../src/domain/guardedNfkc.ts';
+import { HORIZONTAL_BAR } from '../../src/domain/horizontalBar.ts';
 
 // 見た目で区別できない字は、コードポイントで書く
 const u = (...codePoints: number[]): string =>
   String.fromCodePoint(...codePoints);
-
-const HORIZONTAL_BAR = /[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]/u;
 
 const label = (char: string): string =>
   `U+${(char.codePointAt(0) ?? 0).toString(16).toUpperCase()}`;

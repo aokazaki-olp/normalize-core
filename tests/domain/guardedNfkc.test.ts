@@ -5,7 +5,7 @@ import { guardedNfkc } from '../../src/domain/guardedNfkc.ts';
 import { HORIZONTAL_BAR } from '../../src/domain/horizontalBar.ts';
 
 // 見た目で区別できない字は、コードポイントで書く
-const u = (...codePoints: number[]): string =>
+const chars = (...codePoints: number[]): string =>
   String.fromCodePoint(...codePoints);
 
 const label = (char: string): string =>
@@ -25,16 +25,20 @@ describe('guardedNfkc', () => {
     const cases: [string, string, string][] = [
       ['半角カナの地名', 'ﾆｾｺ町ﾆｾｺ', 'ニセコ町ニセコ'],
       ['半角カナと数字', 'ｾﾝﾄﾚｱ1-1', 'セントレア1-1'],
-      ['半角の小書きのケ', '鶴ｹ島市', '鶴ケ島市'],
-      ['康熙部首の長', `${u(0x2fa7)}野市`, `${u(0x9577)}野市`],
-      ['康熙部首の一', `道玄坂${u(0x2f00)}丁目`, `道玄坂${u(0x4e00)}丁目`],
+      ['半角のケ', '鶴ｹ島市', '鶴ケ島市'],
+      ['康熙部首の長', `${chars(0x2fa7)}野市`, `${chars(0x9577)}野市`],
+      [
+        '康熙部首の一',
+        `道玄坂${chars(0x2f00)}丁目`,
+        `道玄坂${chars(0x4e00)}丁目`,
+      ],
       ['全角英数', 'ＡＢＣ１２３', 'ABC123'],
-      ['全角のハイフン（横棒どうし）', `1${u(0xff0d)}2`, '1-2'],
+      ['全角のハイフン（横棒どうし）', `1${chars(0xff0d)}2`, '1-2'],
       ['半角の長音（横棒どうし）', 'ｽｰﾊﾟｰ', 'スーパー'],
-      ['全角スペース', `東京都${u(0x3000)}渋谷区`, '東京都 渋谷区'],
-      ['CJK 互換漢字', u(0xfa10), u(0x585a)],
-      ['囲みの CJK の漢数字', u(0x1f229), u(0x4e00)],
-      ['CJK 互換漢字の漢数字', u(0xf9b2), u(0x96f6)],
+      ['全角スペース', `東京都${chars(0x3000)}渋谷区`, '東京都 渋谷区'],
+      ['CJK 互換漢字', chars(0xfa10), chars(0x585a)],
+      ['囲みの CJK の漢数字', chars(0x1f229), chars(0x4e00)],
+      ['CJK 互換漢字の漢数字', chars(0xf9b2), chars(0x96f6)],
     ];
     for (const [name, input, expected] of cases) {
       it(name, () => {
@@ -53,7 +57,7 @@ describe('guardedNfkc', () => {
     });
 
     it('分解された濁点も合成する', () => {
-      assert.equal(guardedNfkc(u(0x30d2, 0x3099)), u(0x30d3));
+      assert.equal(guardedNfkc(chars(0x30d2, 0x3099)), chars(0x30d3));
     });
   });
 
@@ -64,15 +68,15 @@ describe('guardedNfkc', () => {
       ['一般カテゴリ No（分数）', '½'],
       ['一般カテゴリ Nl（ローマ数字）', 'Ⅰ'],
       ['一般カテゴリ Nl（ローマ数字）', 'Ⅱ'],
-      ['一般カテゴリ Nl（蘇州数字）', u(0x3038)],
-      ['一般カテゴリ No（囲みの漢数字）', u(0x3280)],
+      ['一般カテゴリ Nl（蘇州数字）', chars(0x3038)],
+      ['一般カテゴリ No（囲みの漢数字）', chars(0x3280)],
       ['結果が2文字以上（囲み文字）', '㈱'],
       ['結果が2文字以上（組文字）', '㍉'],
       ['結果が2文字以上（三点リーダー）', '…'],
       ['結果が2文字以上（ナンバー記号）', '№'],
-      ['結果が2文字以上（濁点）', u(0x309b)],
-      ['結果が ASCII の数字を含む', u(0x1d7cf)],
-      ['結果が横棒を含み、元は横棒でない', u(0x207b)],
+      ['結果が2文字以上（濁点）', chars(0x309b)],
+      ['結果が ASCII の数字を含む', chars(0x1d7cf)],
+      ['結果が横棒を含み、元は横棒でない', chars(0x207b)],
     ];
     for (const [name, char] of cases) {
       it(`${name}: ${label(char)}`, () => {
@@ -94,11 +98,11 @@ describe('guardedNfkc', () => {
     });
 
     it('残した文字にも最後の NFC がかかる', () => {
-      assert.equal(guardedNfkc(u(0x1fee)), u(0x0385));
+      assert.equal(guardedNfkc(chars(0x1fee)), chars(0x0385));
     });
 
     it('残した濁点は前の字と合成しない', () => {
-      assert.equal(guardedNfkc(`ｶ${u(0x309b)}`), `カ${u(0x309b)}`);
+      assert.equal(guardedNfkc(`ｶ${chars(0x309b)}`), `カ${chars(0x309b)}`);
     });
   });
 
@@ -112,7 +116,7 @@ describe('guardedNfkc', () => {
     });
 
     it('サロゲートペアを1文字として扱う', () => {
-      assert.equal(guardedNfkc(u(0x1d400)), 'A');
+      assert.equal(guardedNfkc(chars(0x1d400)), 'A');
     });
 
     it('対になっていないサロゲートはそのまま', () => {
@@ -149,7 +153,7 @@ describe('guardedNfkc', () => {
   });
 
   it('条件に当たる文字を含まなければ NFKC と同じ', () => {
-    const input = `ﾆｾｺ町${u(0x3000)}ＡＢ１${u(0xff0d)}２ﾋﾞﾙ${u(0x2fa7, 0xfa10)}`;
+    const input = `ﾆｾｺ町${chars(0x3000)}ＡＢ１${chars(0xff0d)}２ﾋﾞﾙ${chars(0x2fa7, 0xfa10)}`;
     assert.equal(guardedNfkc(input), input.normalize('NFKC'));
   });
 

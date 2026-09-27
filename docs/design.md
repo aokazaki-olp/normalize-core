@@ -7,7 +7,7 @@
 ```
 src/
   index.ts    公開面
-  domain/     ガード付き NFKC と、それが判定に使う横棒の集合（住所に固有。下記）
+  domain/     ガード付き NFKC と、それが判定に使う横棒の集合（住所に固有。下記）、字形の指定
 ```
 
 - 依存は `index.ts` → `domain` の一方向
@@ -35,3 +35,39 @@ export const guardedNfkc: (text: string) => string;
 - 最後の NFC は、残した文字にもかかる（例：U+1FEE → U+0385）
 - 判定は実行環境の Unicode の版に依存する
 - 引数が文字列でなければ `TypeError` を投げる
+
+## 字形の指定（CharStyle）
+
+正規化器の出力を、利用者が指定した字形にそろえる。出力の直前にだけかける（正規化の処理は半角のまま行う）。
+
+```ts
+export type WidthMode = 'half' | 'full';
+export type CharTarget = WidthMode | string; // string は1コードポイント
+
+export interface CharStyle {
+  digit?: WidthMode; // 0-9
+  alpha?: WidthMode; // A-Z a-z
+  symbol?: WidthMode; // ASCII の記号（U+0021〜U+007E のうち数字・英字以外の32字）
+  space?: WidthMode; // U+0020
+  chars?: Record<string, CharTarget>; // 1字ずつの指定
+}
+
+export const applyCharStyle: (text: string, style: CharStyle) => string;
+export const mergeCharStyle: (
+  base: CharStyle,
+  override: CharStyle,
+) => CharStyle;
+```
+
+- 1コードポイントずつ、`chars` の指定 → その字のクラスの指定 → そのまま、の順で決める
+- `full` は、ASCII の字を U+FF01〜U+FF5E（コードポイントに 0xFEE0 を足す）に、空白を U+3000 にする。`half` は変えない
+- 省略したクラスは `half`
+- `mergeCharStyle` は、クラスは `override` を優先し、`chars` はキーごとにマージする（`override` にあるキーだけ上書き）
+
+### 検査（`applyCharStyle` の入口で `TypeError`）
+
+- `chars` のキーと、文字列の値は、どちらも1コードポイント
+- ASCII 以外のキーに `half` / `full` を指定しない（ASCII 以外の字にはクラスが無いため）
+- 値に使った字を、キーにしない（置き換えが連鎖しないように）
+- 値が ASCII の字なら、その字は自分のクラスの指定（とそれを上書きする `chars`）で変わらないこと。2回かけても結果が変わらないようにするため
+- 上を満たせば、同じ `style` で2回かけても結果は変わらない

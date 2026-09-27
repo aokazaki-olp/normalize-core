@@ -123,6 +123,12 @@ describe('guardedNfkc', () => {
       const input = `a${String.fromCharCode(0xd800)}b`;
       assert.equal(guardedNfkc(input), input);
     });
+
+    it('大量の入力（10万字）', () => {
+      const unit = `ﾋﾞﾙ①ＡＢ１${chars(0x2fa7)}ｰ${chars(0x3000)}`;
+      const expected = `ビル①AB1${chars(0x9577)}ー `;
+      assert.equal(guardedNfkc(unit.repeat(10_000)), expected.repeat(10_000));
+    });
   });
 
   describe('全コードポイントで性質を満たす', () => {

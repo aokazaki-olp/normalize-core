@@ -5,3 +5,5 @@
  */
 
 export { guardedNfkc } from './domain/guardedNfkc.ts';
+export { applyCharStyle, mergeCharStyle } from './domain/charStyle.ts';
+export type { CharStyle, CharTarget, WidthMode } from './domain/charStyle.ts';

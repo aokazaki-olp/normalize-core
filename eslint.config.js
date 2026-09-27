@@ -12,7 +12,7 @@ const SRC_TS_FILES = ['src/**/*.ts', 'src/**/*.mts'];
 const RELATIVE_JS = '^\\.{1,2}/.*\\.m?js$';
 const NOT_RELATIVE = '^(?!\\.{1,2}/)';
 
-const syntaxRules = {
+const SYNTAX_RULES = {
   curly: ['error', 'all'],
   'no-var': 'error',
   yoda: 'error',
@@ -46,8 +46,8 @@ const RELATIVE_JS_IMPORT = {
   message: '相対 import には実ファイルの拡張子を書く（規約 §2.2）',
 };
 
-const tsRestrictedSyntax = [
-  ...syntaxRules['no-restricted-syntax'],
+const TS_RESTRICTED_SYNTAX = [
+  ...SYNTAX_RULES['no-restricted-syntax'],
   {
     selector: `ImportExpression > Literal[value=/${RELATIVE_JS.replaceAll('/', '\\/')}/]`,
     message: RELATIVE_JS_IMPORT.message,
@@ -71,7 +71,7 @@ export default defineConfig(
     files: JS_FILES,
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.nodeBuiltin },
-    rules: syntaxRules,
+    rules: SYNTAX_RULES,
   },
 
   {
@@ -85,9 +85,9 @@ export default defineConfig(
       },
     },
     rules: {
-      ...syntaxRules,
+      ...SYNTAX_RULES,
       'no-restricted-imports': ['error', { patterns: [RELATIVE_JS_IMPORT] }],
-      'no-restricted-syntax': tsRestrictedSyntax,
+      'no-restricted-syntax': TS_RESTRICTED_SYNTAX,
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/explicit-module-boundary-types': 'error',
       '@typescript-eslint/no-unused-vars': [
@@ -128,7 +128,7 @@ export default defineConfig(
         },
       ],
       'no-restricted-syntax': [
-        ...tsRestrictedSyntax,
+        ...TS_RESTRICTED_SYNTAX,
         {
           selector: `ImportExpression > Literal[value=/${NOT_RELATIVE.replaceAll('/', '\\/')}/]`,
           message: EXTERNAL_MESSAGE,
@@ -158,8 +158,8 @@ export default defineConfig(
   {
     files: [...TS_FILES, ...JS_FILES],
     rules: {
-      curly: syntaxRules.curly,
-      'max-statements-per-line': syntaxRules['max-statements-per-line'],
+      curly: SYNTAX_RULES.curly,
+      'max-statements-per-line': SYNTAX_RULES['max-statements-per-line'],
     },
   },
 );

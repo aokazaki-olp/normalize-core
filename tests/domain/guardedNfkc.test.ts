@@ -39,6 +39,7 @@ describe('guardedNfkc', () => {
       ['CJK 互換漢字', chars(0xfa10), chars(0x585a)],
       ['囲みの CJK の漢数字', chars(0x1f229), chars(0x4e00)],
       ['CJK 互換漢字の漢数字', chars(0xf9b2), chars(0x96f6)],
+      ['結果が補助面の1コードポイント', chars(0x1079c), chars(0x1df04)],
     ];
     for (const [name, input, expected] of cases) {
       it(name, () => {

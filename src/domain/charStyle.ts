@@ -65,6 +65,16 @@ const toWidth = (char: string, mode: WidthMode): string => {
   return String.fromCodePoint((char.codePointAt(0) ?? 0) + FULLWIDTH_OFFSET);
 };
 
+const fromFullWidth = (char: string): string | undefined => {
+  if (char === IDEOGRAPHIC_SPACE) {
+    return ' ';
+  }
+  const codePoint = char.codePointAt(0) ?? 0;
+  return codePoint >= 0xff01 && codePoint <= 0xff5e
+    ? String.fromCodePoint(codePoint - FULLWIDTH_OFFSET)
+    : undefined;
+};
+
 const isObject = (value: unknown): value is object =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -91,6 +101,13 @@ const validateChars = (
     } else if (!SINGLE_CODE_POINT.test(value)) {
       throw new TypeError(
         `chars の ${key} の値は1コードポイントにしてください`,
+      );
+    }
+    const halfWidth = fromFullWidth(key);
+    const halfClass = halfWidth === undefined ? undefined : classOf(halfWidth);
+    if (halfClass !== undefined && style[halfClass] === 'full') {
+      throw new TypeError(
+        `chars のキー ${key} は ${halfClass} の指定で作られる字なのでキーにできません`,
       );
     }
     entries.set(key, value);

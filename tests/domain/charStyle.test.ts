@@ -16,7 +16,7 @@ describe('applyCharStyle', () => {
       ['alpha: full', { alpha: 'full' }, 'Az1', 'Ａｚ1'],
       ['symbol: full', { symbol: 'full' }, '!-~a', '！－～a'],
       ['symbol は記号32字', { symbol: 'full' }, '[`{', '［｀｛'],
-      ['space: full は U+3000', { space: 'full' }, 'a b', 'a　b'],
+      ['space: full は U+3000', { space: 'full' }, 'a b', 'a\u3000b'],
       [
         'すべて half',
         { digit: 'half', alpha: 'half' },
@@ -106,6 +106,7 @@ describe('applyCharStyle', () => {
       ['値が空文字列', { chars: { a: '' } }],
       ['ASCII 以外のキーに full', { chars: { ー: 'full' } }],
       ['ASCII 以外のキーに half', { chars: { ー: 'half' } }],
+      ['制御文字のキーに full', { chars: { '\u0001': 'full' } }],
       ['値をキーにする', { chars: { a: 'b', b: 'c' } }],
       ['値が自分と同じキー', { chars: { ー: 'ー' } }],
       [
@@ -114,7 +115,15 @@ describe('applyCharStyle', () => {
       ],
       [
         '値の空白が space の指定で変わる',
-        { space: 'full', chars: { '　': ' ' } },
+        { space: 'full', chars: { '\u3000': ' ' } },
+      ],
+      [
+        'full で作る全角の字をキーにする',
+        { alpha: 'full', chars: { Ａ: '吉' } },
+      ],
+      [
+        'full で作る U+3000 をキーにする',
+        { space: 'full', chars: { '\u3000': '＿' } },
       ],
     ];
     for (const [name, style] of cases) {
@@ -122,6 +131,16 @@ describe('applyCharStyle', () => {
         assert.throws(() => applyCharStyle('a', style as any), TypeError);
       });
     }
+
+    it('全角の字のキーは、そのクラスが half なら通る', () => {
+      const style: CharStyle = {
+        alpha: 'half',
+        chars: { Ａ: '吉', '\u3000': '＿' },
+      };
+      const once = applyCharStyle('AＡ \u3000', style);
+      assert.equal(once, 'A吉 ＿');
+      assert.equal(applyCharStyle(once, style), once);
+    });
 
     it('値の ASCII の字のクラスが half なら通る', () => {
       assert.equal(

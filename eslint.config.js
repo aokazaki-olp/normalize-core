@@ -7,10 +7,12 @@ import tseslint from 'typescript-eslint';
 const TS_FILES = ['**/*.ts', '**/*.mts'];
 const JS_FILES = ['**/*.js', '**/*.mjs'];
 const TEST_FILES = ['tests/**/*.ts', 'tests/**/*.mts'];
+const SRC_TS_FILES = ['src/**/*.ts', 'src/**/*.mts'];
 
 const RELATIVE_JS = '^\\.{1,2}/.*\\.m?js$';
+const NOT_RELATIVE = '^(?!\\.{1,2}/)';
 
-const syntaxRules = {
+const SYNTAX_RULES = {
   curly: ['error', 'all'],
   'no-var': 'error',
   yoda: 'error',
@@ -39,6 +41,27 @@ const syntaxRules = {
   ],
 };
 
+const RELATIVE_JS_IMPORT = {
+  regex: RELATIVE_JS,
+  message: '相対 import には実ファイルの拡張子を書く（規約 §2.2）',
+};
+
+const TS_RESTRICTED_SYNTAX = [
+  ...SYNTAX_RULES['no-restricted-syntax'],
+  {
+    selector: `ImportExpression > Literal[value=/${RELATIVE_JS.replaceAll('/', '\\/')}/]`,
+    message: RELATIVE_JS_IMPORT.message,
+  },
+  {
+    selector: 'ImportExpression > :not(Literal).source',
+    message:
+      '動的 import の指定子は文字列リテラルで書く（規約 §2.2 の検査を効かせるため）',
+  },
+];
+
+const EXTERNAL_MESSAGE =
+  'src/ からは相対パス以外を import しない（docs/design.md）';
+
 export default defineConfig(
   { ignores: ['dist/'] },
 
@@ -48,7 +71,7 @@ export default defineConfig(
     files: JS_FILES,
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.nodeBuiltin },
-    rules: syntaxRules,
+    rules: SYNTAX_RULES,
   },
 
   {
@@ -62,30 +85,9 @@ export default defineConfig(
       },
     },
     rules: {
-      ...syntaxRules,
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              regex: RELATIVE_JS,
-              message: '相対 import には実ファイルの拡張子を書く（規約 §2.2）',
-            },
-          ],
-        },
-      ],
-      'no-restricted-syntax': [
-        ...syntaxRules['no-restricted-syntax'],
-        {
-          selector: `ImportExpression > Literal[value=/${RELATIVE_JS.replaceAll('/', '\\/')}/]`,
-          message: '相対 import には実ファイルの拡張子を書く（規約 §2.2）',
-        },
-        {
-          selector: 'ImportExpression > TemplateLiteral',
-          message:
-            '動的 import の指定子はリテラルで書く（規約 §2.2 の検査を効かせるため）',
-        },
-      ],
+      ...SYNTAX_RULES,
+      'no-restricted-imports': ['error', { patterns: [RELATIVE_JS_IMPORT] }],
+      'no-restricted-syntax': TS_RESTRICTED_SYNTAX,
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/explicit-module-boundary-types': 'error',
       '@typescript-eslint/no-unused-vars': [
@@ -114,6 +116,28 @@ export default defineConfig(
   },
 
   {
+    files: SRC_TS_FILES,
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            RELATIVE_JS_IMPORT,
+            { regex: NOT_RELATIVE, message: EXTERNAL_MESSAGE },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        ...TS_RESTRICTED_SYNTAX,
+        {
+          selector: `ImportExpression > Literal[value=/${NOT_RELATIVE.replaceAll('/', '\\/')}/]`,
+          message: EXTERNAL_MESSAGE,
+        },
+      ],
+    },
+  },
+
+  {
     files: TEST_FILES,
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
@@ -134,8 +158,8 @@ export default defineConfig(
   {
     files: [...TS_FILES, ...JS_FILES],
     rules: {
-      curly: syntaxRules.curly,
-      'max-statements-per-line': syntaxRules['max-statements-per-line'],
+      curly: SYNTAX_RULES.curly,
+      'max-statements-per-line': SYNTAX_RULES['max-statements-per-line'],
     },
   },
 );

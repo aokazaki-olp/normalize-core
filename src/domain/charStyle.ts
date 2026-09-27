@@ -103,16 +103,19 @@ const validateChars = (
         `chars の ${key} の値は1コードポイントにしてください`,
       );
     }
-    const halfWidth = fromFullWidth(key);
-    const halfClass = halfWidth === undefined ? undefined : classOf(halfWidth);
-    if (halfClass !== undefined && style[halfClass] === 'full') {
-      throw new TypeError(
-        `chars のキー ${key} は ${halfClass} の指定で作られる字なのでキーにできません`,
-      );
-    }
     entries.set(key, value);
   }
   for (const [key, value] of entries) {
+    const halfWidth = fromFullWidth(key);
+    const halfClass = halfWidth === undefined ? undefined : classOf(halfWidth);
+    if (halfWidth !== undefined && halfClass !== undefined) {
+      const mode = entries.get(halfWidth) ?? style[halfClass];
+      if (mode === 'full') {
+        throw new TypeError(
+          `chars のキー ${key} は ${halfWidth} を full にした字なのでキーにできません`,
+        );
+      }
+    }
     if (isWidthMode(value)) {
       continue;
     }

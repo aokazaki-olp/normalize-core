@@ -125,12 +125,26 @@ describe('applyCharStyle', () => {
         'full で作る U+3000 をキーにする',
         { space: 'full', chars: { '\u3000': '＿' } },
       ],
+      [
+        'chars で full にした字の全角形をキーにする',
+        { chars: { A: 'full', Ａ: '吉' } },
+      ],
     ];
     for (const [name, style] of cases) {
       it(name, () => {
         assert.throws(() => applyCharStyle('a', style as any), TypeError);
       });
     }
+
+    it('クラスが full でも、chars で half にした字の全角形はキーにできる', () => {
+      const style: CharStyle = {
+        alpha: 'full',
+        chars: { A: 'half', Ａ: '吉' },
+      };
+      const once = applyCharStyle('AＡb', style);
+      assert.equal(once, 'A吉ｂ');
+      assert.equal(applyCharStyle(once, style), once);
+    });
 
     it('全角の字のキーは、そのクラスが half なら通る', () => {
       const style: CharStyle = {

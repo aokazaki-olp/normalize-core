@@ -7,7 +7,7 @@
 ```
 src/
   index.ts    公開面
-  domain/     ガード付き NFKC と、それが判定に使う横棒の集合（住所に固有。下記）、字形の指定
+  domain/     ガード付き NFKC と、それが判定に使う横棒の集合（住所に固有。下記。公開もする）、字形の指定
 ```
 
 - 依存は `index.ts` → `domain` の一方向
@@ -29,12 +29,23 @@ export const guardedNfkc: (text: string) => string;
 | NFKC の結果が ASCII の数字を含む（全角数字 `０`〜`９` は除く） | `𝟏`                       |
 | NFKC の結果が横棒を含み、元の文字は横棒でない                  | `⁻` → `−`                 |
 
-- 横棒は、NJA v3.1.3 が横棒として扱う18文字（`src/lib/normalizeHelpers.ts` の文字クラス）。住所に固有の集合なので、`domain/horizontalBar.ts` に分けて置く
+- 横棒は、NJA v3.1.3 が横棒として扱う18文字（`src/lib/normalizeHelpers.ts` の文字クラス）。住所に固有の集合なので、`domain/horizontalBar.ts` に分けて置く。公開については次節
 - 漢数字は数字として扱わない。康熙部首（`⼀` → `一`）、囲みの CJK（`🈩` → `一`）、CJK 互換漢字（U+F9B2 → `零`）が漢数字に変わるのは意図どおり。字形違いを正規の字にそろえるため（住所では `道玄坂⼀丁目2-3` が番地まで解析できるようになる。2026-09-26 実測）
 - 既知の制限：こうした文字が番地の数字の直後に詰めて書かれると（`1-2-3⼀`）、NJA が変換後の漢数字を番地の一部として読むことがある
 - 最後の NFC は、残した文字にもかかる（例：U+1FEE → U+0385）
 - 判定は実行環境の Unicode の版に依存する
 - 引数が文字列でなければ `TypeError` を投げる
+
+## 横棒の集合（HORIZONTAL_BAR）
+
+```ts
+export const HORIZONTAL_BAR: string; // 正規表現の文字クラスの source（'[\\-－﹣…━]'）
+```
+
+- 利用者（normalize-address）が、横棒を扱う正規表現を組み立てるために使う（例：``new RegExp(`^(?:${HORIZONTAL_BAR})+`, 'u')``）
+- 1コードポイントに当たる文字クラス1つ（`[...]`）。そのまま量指定子を付けられる
+- `-` はエスケープしてあるので、フラグなし・`u`・`v` のどれで組み立てても同じ18文字に当たる
+- `RegExp` ではなく文字列で公開する。`RegExp` のインスタンスは共有すると書き換えられる（`compile()` は、`Object.freeze` した正規表現でも、例外を投げる前に中身を書き換える。Node v24.21.0 で実測）。ガード付き NFKC が使う正規表現は、この文字列から内部で作る
 
 ## 字形の指定（CharStyle）
 
@@ -42,7 +53,7 @@ export const guardedNfkc: (text: string) => string;
 
 ```ts
 export type WidthMode = 'half' | 'full';
-export type CharTarget = WidthMode | string; // string は1コードポイント
+export type CharTarget = WidthMode | (string & {}); // string は1コードポイント
 
 export interface CharStyle {
   digit?: WidthMode; // 0-9
@@ -62,7 +73,9 @@ export const mergeCharStyle: (
 - 1コードポイントずつ、`chars` の指定 → その字のクラスの指定 → そのまま、の順で決める
 - `full` は、ASCII の字を U+FF01〜U+FF5E（コードポイントに 0xFEE0 を足す）に、空白を U+3000 にする。`half` は変えない
 - 省略したクラスは `half`
+- `CharTarget` の `string & {}` は、`WidthMode | string` が `string` に畳まれて、エディタの補完から `half`・`full` が消えるのを防ぐため。受けられる値は `string` と同じ
 - `mergeCharStyle` は、クラスは `override` を優先し、`chars` はキーごとにマージする（`override` にあるキーだけ上書き）
+- `mergeCharStyle` は、`base`・`override` が配列でない object であること、それぞれの `chars` が（省略されていなければ）配列でない object であることを検査し、満たさなければ `TypeError` を投げる。`chars` はスプレッドで展開するので、文字列や配列を渡すと object に化けて、`applyCharStyle` の検査をすり抜けるため。それ以外の検査は `applyCharStyle` で行う
 
 ### 検査（`applyCharStyle` の入口で `TypeError`）
 

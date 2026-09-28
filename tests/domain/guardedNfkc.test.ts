@@ -150,11 +150,12 @@ describe('guardedNfkc', () => {
     });
 
     it('元に無かった横棒を生まない（横棒どうしを除く）', () => {
+      const horizontalBar = new RegExp(HORIZONTAL_BAR, 'u');
       for (const char of allCodePoints()) {
-        if (HORIZONTAL_BAR.test(char)) {
+        if (horizontalBar.test(char)) {
           continue;
         }
-        assert.doesNotMatch(guardedNfkc(char), HORIZONTAL_BAR, label(char));
+        assert.doesNotMatch(guardedNfkc(char), horizontalBar, label(char));
       }
     });
   });

@@ -4,9 +4,14 @@
  * @description 字形の指定（CharStyle）と、それを文字列にかける関数
  */
 
+/** 字形の幅。half は変えない、full は全角にする */
 export type WidthMode = 'half' | 'full';
-// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents -- 設計文書の型どおり、half / full を受けることを型の上で示す
-export type CharTarget = WidthMode | string;
+/**
+ * chars の値。half・full か、1コードポイントの字
+ *
+ * `string & {}` は、`WidthMode | string` が string に畳まれて補完から half・full が消えるのを防ぐため。受けられる値は string と同じ。
+ */
+export type CharTarget = WidthMode | (string & {});
 
 /**
  * 字形の指定
@@ -193,7 +198,7 @@ export const applyCharStyle = (text: string, style: CharStyle): string => {
  * @param base - 元の指定
  * @param override - 上書きする指定
  * @returns 重ねた指定
- * @throws {TypeError} base または override が object でない場合
+ * @throws {TypeError} base・override、またはそれぞれの chars が object でない場合
  */
 export const mergeCharStyle = (
   base: CharStyle,
@@ -201,6 +206,16 @@ export const mergeCharStyle = (
 ): CharStyle => {
   if (!isObject(base) || !isObject(override)) {
     throw new TypeError('base と override には object を指定してください');
+  }
+  const baseChars: unknown = base.chars;
+  const overrideChars: unknown = override.chars;
+  if (
+    (baseChars !== undefined && !isObject(baseChars)) ||
+    (overrideChars !== undefined && !isObject(overrideChars))
+  ) {
+    throw new TypeError(
+      'base と override の chars には object を指定してください',
+    );
   }
   const merged: CharStyle = {};
   for (const name of CLASSES) {

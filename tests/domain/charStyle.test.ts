@@ -214,4 +214,24 @@ describe('mergeCharStyle', () => {
       assert.throws(() => mergeCharStyle({}, value as any), TypeError);
     });
   }
+
+  for (const value of ['abc', ['a'], null, 1]) {
+    it(`chars が ${JSON.stringify(value)}`, () => {
+      assert.throws(
+        () => mergeCharStyle({ chars: value as any }, {}),
+        TypeError,
+      );
+      assert.throws(
+        () => mergeCharStyle({}, { chars: value as any }),
+        TypeError,
+      );
+    });
+  }
+
+  it('chars が undefined なら無いものとして扱う', () => {
+    assert.deepEqual(
+      mergeCharStyle({ chars: undefined }, { chars: { ー: '-' } }),
+      { chars: { ー: '-' } },
+    );
+  });
 });

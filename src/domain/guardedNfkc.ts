@@ -4,13 +4,13 @@
  * @description ガード付き NFKC（条件に当たる文字を残して NFKC をかける）
  */
 
-import { HORIZONTAL_BAR } from './horizontalBar.ts';
+import { HORIZONTAL_BAR_PATTERN } from './horizontalBar.ts';
 
 const NUMBER_LETTER_OR_OTHER = /^[\p{Nl}\p{No}]$/u;
 const SINGLE_CODE_POINT = /^.$/su;
 const ASCII_DIGIT = /[0-9]/u;
 const FULLWIDTH_DIGIT = /^[０-９]$/u;
-const HORIZONTAL_BAR_CHAR = new RegExp(HORIZONTAL_BAR, 'u');
+const HORIZONTAL_BAR_CHAR = new RegExp(HORIZONTAL_BAR_PATTERN, 'u');
 
 const isGuarded = (char: string, normalized: string): boolean =>
   NUMBER_LETTER_OR_OTHER.test(char) ||

@@ -36,13 +36,13 @@ export const guardedNfkc: (text: string) => string;
 - 判定は実行環境の Unicode の版に依存する
 - 引数が文字列でなければ `TypeError` を投げる
 
-## 横棒の集合（HORIZONTAL_BAR）
+## 横棒の集合の正規表現パターン（HORIZONTAL_BAR_PATTERN）
 
 ```ts
-export const HORIZONTAL_BAR: string; // 正規表現の文字クラスの source（'[\\-－﹣…━]'）
+export const HORIZONTAL_BAR_PATTERN: string; // 正規表現のパターンの文字列。文字クラス1つ分の source（'[\\-－﹣…━]'）
 ```
 
-- 利用者（normalize-address）が、横棒を扱う正規表現を組み立てるために使う（例：``new RegExp(`^(?:${HORIZONTAL_BAR})+`, 'u')``）
+- 正規表現のパターンの文字列（`RegExp` ではない）。利用者（normalize-address）が、横棒を扱う正規表現を組み立てるために使う（例：``new RegExp(`^(?:${HORIZONTAL_BAR_PATTERN})+`, 'u')``）
 - 1コードポイントに当たる文字クラス1つ（`[...]`）。そのまま量指定子を付けられる
 - `-` はエスケープしてあるので、フラグなし・`u`・`v` のどれで組み立てても同じ18文字に当たる
 - `RegExp` ではなく文字列で公開する。`RegExp` のインスタンスは共有すると書き換えられる（`compile()` は、`Object.freeze` した正規表現でも、例外を投げる前に中身を書き換える。Node v24.21.0 で実測）。ガード付き NFKC が使う正規表現は、この文字列から内部で作る

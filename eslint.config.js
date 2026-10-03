@@ -59,6 +59,14 @@ const TS_RESTRICTED_SYNTAX = [
   },
 ];
 
+const UNUSED_VARS_OPTIONS = {
+  args: 'all',
+  argsIgnorePattern: '^_',
+  varsIgnorePattern: '^_',
+  caughtErrors: 'all',
+  caughtErrorsIgnorePattern: '^_',
+};
+
 const EXTERNAL_MESSAGE =
   'src/ からは相対パス以外を import しない（docs/design.md）';
 
@@ -71,7 +79,10 @@ export default defineConfig(
     files: JS_FILES,
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.nodeBuiltin },
-    rules: SYNTAX_RULES,
+    rules: {
+      ...SYNTAX_RULES,
+      'no-unused-vars': ['error', UNUSED_VARS_OPTIONS],
+    },
   },
 
   {
@@ -89,17 +100,14 @@ export default defineConfig(
       'no-restricted-imports': ['error', { patterns: [RELATIVE_JS_IMPORT] }],
       'no-restricted-syntax': TS_RESTRICTED_SYNTAX,
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
-      '@typescript-eslint/explicit-module-boundary-types': 'error',
-      '@typescript-eslint/no-unused-vars': [
+      '@typescript-eslint/explicit-module-boundary-types': [
         'error',
         {
-          args: 'all',
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          caughtErrors: 'all',
-          caughtErrorsIgnorePattern: '^_',
+          allowHigherOrderFunctions: false,
+          allowDirectConstAssertionInArrowFunctions: false,
         },
       ],
+      '@typescript-eslint/no-unused-vars': ['error', UNUSED_VARS_OPTIONS],
       '@typescript-eslint/no-floating-promises': [
         'error',
         {

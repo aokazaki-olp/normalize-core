@@ -68,6 +68,21 @@ describe('applyCharStyle', () => {
     it('空文字列', () => {
       assert.equal(applyCharStyle('', { digit: 'full' }), '');
     });
+
+    it('大量の入力（10万字）', () => {
+      const style: CharStyle = {
+        digit: 'full',
+        alpha: 'full',
+        space: 'full',
+        chars: { ー: '-', '𠮷': '吉' },
+      };
+      const unit = '1a ー𠮷東!-9Z';
+      const expected = '１ａ\u3000-吉東!-９Ｚ';
+      assert.equal(
+        applyCharStyle(unit.repeat(10_000), style),
+        expected.repeat(10_000),
+      );
+    });
   });
 
   describe('2回かけても結果が変わらない', () => {
@@ -208,8 +223,8 @@ describe('mergeCharStyle', () => {
     assert.deepEqual(base, { chars: { ー: '-' } });
   });
 
-  for (const value of [undefined, null, 'full']) {
-    it(`引数が ${String(value)}`, () => {
+  for (const value of [undefined, null, 'full', []]) {
+    it(`引数が ${JSON.stringify(value)}`, () => {
       assert.throws(() => mergeCharStyle(value as any, {}), TypeError);
       assert.throws(() => mergeCharStyle({}, value as any), TypeError);
     });

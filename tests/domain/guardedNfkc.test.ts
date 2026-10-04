@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { guardedNfkc } from '../../src/domain/guardedNfkc.ts';
-import { HORIZONTAL_BAR } from '../../src/domain/horizontalBar.ts';
+import { HORIZONTAL_BAR_PATTERN } from '../../src/domain/horizontalBar.ts';
 
 // 見た目で区別できない字は、コードポイントで書く
 const chars = (...codePoints: number[]): string =>
@@ -150,11 +150,12 @@ describe('guardedNfkc', () => {
     });
 
     it('元に無かった横棒を生まない（横棒どうしを除く）', () => {
+      const horizontalBar = new RegExp(HORIZONTAL_BAR_PATTERN, 'u');
       for (const char of allCodePoints()) {
-        if (HORIZONTAL_BAR.test(char)) {
+        if (horizontalBar.test(char)) {
           continue;
         }
-        assert.doesNotMatch(guardedNfkc(char), HORIZONTAL_BAR, label(char));
+        assert.doesNotMatch(guardedNfkc(char), horizontalBar, label(char));
       }
     });
   });

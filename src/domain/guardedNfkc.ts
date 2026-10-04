@@ -4,18 +4,19 @@
  * @description ガード付き NFKC（条件に当たる文字を残して NFKC をかける）
  */
 
-import { HORIZONTAL_BAR } from './horizontalBar.ts';
+import { HORIZONTAL_BAR_PATTERN } from './horizontalBar.ts';
 
 const NUMBER_LETTER_OR_OTHER = /^[\p{Nl}\p{No}]$/u;
 const SINGLE_CODE_POINT = /^.$/su;
 const ASCII_DIGIT = /[0-9]/u;
 const FULLWIDTH_DIGIT = /^[０-９]$/u;
+const HORIZONTAL_BAR_CHAR = new RegExp(HORIZONTAL_BAR_PATTERN, 'u');
 
 const isGuarded = (char: string, normalized: string): boolean =>
   NUMBER_LETTER_OR_OTHER.test(char) ||
   !SINGLE_CODE_POINT.test(normalized) ||
   (ASCII_DIGIT.test(normalized) && !FULLWIDTH_DIGIT.test(char)) ||
-  (HORIZONTAL_BAR.test(normalized) && !HORIZONTAL_BAR.test(char));
+  (HORIZONTAL_BAR_CHAR.test(normalized) && !HORIZONTAL_BAR_CHAR.test(char));
 
 const normalizeChar = (char: string): string => {
   const normalized = char.normalize('NFKC');

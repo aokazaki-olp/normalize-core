@@ -454,4 +454,13 @@ describe('CharStyle.prepareFields', () => {
     assert.equal(CharStyle.apply('1-2', codeStyle ?? {}), '１-２');
     assert.equal(styleOf('name'), undefined);
   });
+
+  it('項目の一覧が空なら、fields のキーはどれも受けない', () => {
+    const styleOf = CharStyle.prepareFields([] as const, {});
+    assert.equal(typeof styleOf, 'function');
+    assert.throws(
+      () => CharStyle.prepareFields([] as const, { fields: { x: {} } as any }),
+      TypeError,
+    );
+  });
 });

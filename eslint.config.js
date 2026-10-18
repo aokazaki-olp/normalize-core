@@ -70,7 +70,7 @@ const TS_RESTRICTED_SYNTAX = [
 const LAYERS = ['domain'];
 const layerFiles = (layer) => [`src/${layer}/**/*.ts`, `src/${layer}/**/*.mts`];
 
-// docs/design.md の「レイヤー」の表。external は import してよい外部のパッケージ（'all' なら制限なし）
+// docs/design.md の「レイヤー」の節（表はここに持つ）。external は import してよい外部のパッケージ（'all' なら制限なし）
 const LAYER_TABLE = [
   {
     name: 'index.ts',

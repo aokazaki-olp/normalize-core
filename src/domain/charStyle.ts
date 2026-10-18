@@ -309,7 +309,7 @@ export const CharStyle = {
    * style・default・fields の検査の TypeError のメッセージには style. の前置きが付く（正規化器のオプションの style をそのまま渡すため）。
    * default・fields の値の chars が object でなければ、マージのときに merge のメッセージ（base と override の chars には object を指定してください）で止まる。
    * マージした指定の検査のメッセージは apply と同じ。
-   * fieldNames は `as const` のリテラルの配列で渡す（ただの string[] だと項目の名前の型が string に広がり、返す関数が一覧に無い名前にも undefined を返す）。
+   * fieldNames は `as const` のリテラルの配列で渡す（ただの string[] だと項目の名前の型が string に広がり、綴りの誤った名前を型の検査で止められず、黙って字形の指定を当てない扱いになる）。
    *
    * @param fieldNames - 項目の名前の一覧
    * @param style - 項目ごとの字形の指定

@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { CharStyle } from '../../src/domain/charStyle.ts';
+import { CharStyle, type FieldStyle } from '../../src/domain/charStyle.ts';
 
 const ASCII_SAMPLE = '09AZaz!/:@[`{~ ';
 
 describe('CharStyle', () => {
-  it('キーは apply・merge', () => {
-    assert.deepEqual(Object.keys(CharStyle).toSorted(), ['apply', 'merge']);
+  it('キーは apply・merge・prepareFields', () => {
+    assert.deepEqual(Object.keys(CharStyle).toSorted(), [
+      'apply',
+      'merge',
+      'prepareFields',
+    ]);
   });
 });
 
@@ -250,5 +254,204 @@ describe('CharStyle.merge', () => {
       CharStyle.merge({ chars: undefined }, { chars: { ー: '-' } }),
       { chars: { ー: '-' } },
     );
+  });
+});
+
+describe('CharStyle.prepareFields', () => {
+  const FIELDS = ['name', 'code'] as const;
+  type Field = (typeof FIELDS)[number];
+  const resolveAll = (
+    style: FieldStyle<Field> | undefined,
+  ): Record<Field, CharStyle | undefined> => {
+    const styleOf = CharStyle.prepareFields(FIELDS, style);
+    return { name: styleOf('name'), code: styleOf('code') };
+  };
+
+  describe('正しい指定', () => {
+    const cases: [
+      string,
+      FieldStyle<Field> | undefined,
+      Record<Field, CharStyle | undefined>,
+    ][] = [
+      ['省略', undefined, { name: {}, code: {} }],
+      ['空の object', {}, { name: {}, code: {} }],
+      [
+        'default だけ',
+        { default: { digit: 'full' } },
+        { name: { digit: 'full' }, code: { digit: 'full' } },
+      ],
+      [
+        'fields で上書きする',
+        { default: { digit: 'full' }, fields: { code: { digit: 'half' } } },
+        { name: { digit: 'full' }, code: { digit: 'half' } },
+      ],
+      [
+        'chars はキーごとにマージする',
+        {
+          default: { chars: { '-': 'ー', '~': '〜' } },
+          fields: { name: { chars: { '-': 'full' } } },
+        },
+        {
+          name: { chars: { '-': 'full', '~': '〜' } },
+          code: { chars: { '-': 'ー', '~': '〜' } },
+        },
+      ],
+      [
+        'false なら当てない',
+        { default: { alpha: 'full' }, fields: { name: false } },
+        { name: undefined, code: { alpha: 'full' } },
+      ],
+      [
+        'fields の値が undefined なら default',
+        { default: { space: 'full' }, fields: { name: undefined } },
+        { name: { space: 'full' }, code: { space: 'full' } },
+      ],
+    ];
+    for (const [name, style, expected] of cases) {
+      it(name, () => {
+        assert.deepEqual(resolveAll(style), expected);
+      });
+    }
+  });
+
+  describe('誤った指定', () => {
+    const cases: [string, unknown, string][] = [
+      ['style が null', null, 'style には object を指定してください'],
+      ['style が文字列', 'full', 'style には object を指定してください'],
+      ['style が配列', [], 'style には object を指定してください'],
+      [
+        'default が文字列',
+        { default: 'full' },
+        'style.default には object を指定してください',
+      ],
+      [
+        'default が null',
+        { default: null },
+        'style.default には object を指定してください',
+      ],
+      [
+        'default が配列',
+        { default: [] },
+        'style.default には object を指定してください',
+      ],
+      [
+        'fields が null',
+        { fields: null },
+        'style.fields には object を指定してください',
+      ],
+      [
+        'fields が配列',
+        { fields: [] },
+        'style.fields には object を指定してください',
+      ],
+      [
+        'fields に無い項目',
+        { fields: { street: {} } },
+        'style.fields のキーには name・code を指定してください: street',
+      ],
+      [
+        'fields の値が true',
+        { fields: { code: true } },
+        'style.fields.code には object または false を指定してください',
+      ],
+      [
+        'fields の値が配列',
+        { fields: { name: [] } },
+        'style.fields.name には object または false を指定してください',
+      ],
+      [
+        'default の chars が文字列',
+        { default: { chars: 'abc' } },
+        'base と override の chars には object を指定してください',
+      ],
+      [
+        'fields の chars が数',
+        { fields: { name: { chars: 1 } } },
+        'base と override の chars には object を指定してください',
+      ],
+      [
+        'default のクラスの値が誤り',
+        { default: { digit: 'wide' } },
+        'digit には half または full を指定してください',
+      ],
+      [
+        'fields の chars のキーが2コードポイント',
+        { fields: { code: { chars: { ab: 'x' } } } },
+        'chars のキー ab は1コードポイントにしてください',
+      ],
+      [
+        'マージした結果が検査を満たさない',
+        {
+          default: { chars: { '~': '〜' } },
+          fields: { code: { chars: { '〜': 'x' } } },
+        },
+        'chars の ~ の値 〜 はキーにできません',
+      ],
+      [
+        'マージした結果で full の字がキーになる',
+        { default: { symbol: 'full', chars: { '－': '-' } } },
+        'chars のキー － は - を full にした字なのでキーにできません',
+      ],
+    ];
+    for (const [name, style, message] of cases) {
+      it(name, () => {
+        assert.throws(() => CharStyle.prepareFields(FIELDS, style as any), {
+          name: 'TypeError',
+          message,
+        });
+      });
+    }
+
+    it('マージした指定の検査は fieldNames の順に行う', () => {
+      assert.throws(
+        () =>
+          CharStyle.prepareFields(FIELDS, {
+            fields: {
+              code: { digit: 'wide' as any },
+              name: { alpha: 'wide' as any },
+            },
+          }),
+        { message: 'alpha には half または full を指定してください' },
+      );
+    });
+
+    it('fields の値の検査はマージより先に行う', () => {
+      assert.throws(
+        () =>
+          CharStyle.prepareFields(FIELDS, {
+            fields: { name: { digit: 'wide' as any }, code: 1 as any },
+          }),
+        {
+          message:
+            'style.fields.code には object または false を指定してください',
+        },
+      );
+    });
+  });
+
+  it('呼んだあとに style を書き換えても結果は変わらない', () => {
+    const style: FieldStyle<Field> = {
+      default: { digit: 'full', chars: { '-': 'ー' } },
+      fields: { code: { alpha: 'full' } },
+    };
+    const styleOf = CharStyle.prepareFields(FIELDS, style);
+    style.default = { digit: 'half' };
+    style.fields = { code: false };
+    assert.deepEqual(styleOf('code'), {
+      digit: 'full',
+      alpha: 'full',
+      chars: { '-': 'ー' },
+    });
+  });
+
+  it('返す指定は apply にそのまま渡せる', () => {
+    const styleOf = CharStyle.prepareFields(FIELDS, {
+      default: { digit: 'full' },
+      fields: { name: false },
+    });
+    const codeStyle = styleOf('code');
+    assert.notEqual(codeStyle, undefined);
+    assert.equal(CharStyle.apply('1-2', codeStyle ?? {}), '１-２');
+    assert.equal(styleOf('name'), undefined);
   });
 });

@@ -33,6 +33,18 @@ export interface CharStyle {
   chars?: Record<string, CharTarget>;
 }
 
+/**
+ * 項目ごとの字形の指定
+ *
+ * 正規化器が、結果の項目ごとに字形の指定を当てるときに使う。
+ */
+export interface FieldStyle<TField extends string> {
+  /** すべての項目に共通の指定 */
+  default?: CharStyle;
+  /** 項目ごとの上書き。false なら、その項目には字形の指定を当てない */
+  fields?: Partial<Record<TField, CharStyle | false>>;
+}
+
 type CharClass = 'digit' | 'alpha' | 'symbol' | 'space';
 
 const CLASSES: readonly CharClass[] = ['digit', 'alpha', 'symbol', 'space'];
@@ -159,17 +171,6 @@ const validateStyle = (style: unknown): Map<string, CharTarget> => {
   return validateChars(candidate, { ...chars });
 };
 
-/**
- * 文字列を、指定した字形にそろえる
- *
- * 1コードポイントずつ、chars の指定 → その字のクラスの指定 → そのまま、の順で決める。
- * full は ASCII の字を U+FF01〜U+FF5E に、空白を U+3000 にする。half は変えない。
- *
- * @param text - そろえる文字列
- * @param style - 字形の指定
- * @returns そろえた文字列
- * @throws {TypeError} text が文字列でない場合、または style が検査を満たさない場合
- */
 const apply = (text: string, style: CharStyle): string => {
   if (typeof text !== 'string') {
     throw new TypeError('text には string を指定してください');
@@ -190,17 +191,6 @@ const apply = (text: string, style: CharStyle): string => {
   }).join('');
 };
 
-/**
- * 2つの字形の指定を重ねる
- *
- * クラスは override を優先し、chars はキーごとにマージする（override にあるキーだけ上書き）。
- * 結果の検査は apply で行う。
- *
- * @param base - 元の指定
- * @param override - 上書きする指定
- * @returns 重ねた指定
- * @throws {TypeError} base・override、またはそれぞれの chars が object でない場合
- */
 const merge = (base: CharStyle, override: CharStyle): CharStyle => {
   if (!isObject(base) || !isObject(override)) {
     throw new TypeError('base と override には object を指定してください');
@@ -228,10 +218,101 @@ const merge = (base: CharStyle, override: CharStyle): CharStyle => {
   return merged;
 };
 
+const checkFields = <TField extends string>(
+  fieldNames: readonly TField[],
+  fields: FieldStyle<TField>['fields'],
+): void => {
+  if (fields === undefined) {
+    return;
+  }
+  if (!isObject(fields)) {
+    throw new TypeError('style.fields には object を指定してください');
+  }
+  for (const key of Object.keys(fields)) {
+    if (!fieldNames.some((field) => field === key)) {
+      throw new TypeError(
+        `style.fields のキーには ${fieldNames.join('・')} を指定してください: ${key}`,
+      );
+    }
+  }
+  for (const field of fieldNames) {
+    const value = fields[field];
+    if (value !== undefined && value !== false && !isObject(value)) {
+      throw new TypeError(
+        `style.fields.${field} には object または false を指定してください`,
+      );
+    }
+  }
+};
+
+const prepareFields = <TField extends string>(
+  fieldNames: readonly TField[],
+  style: FieldStyle<TField> | undefined,
+): ((field: TField) => CharStyle | undefined) => {
+  if (style !== undefined && !isObject(style)) {
+    throw new TypeError('style には object を指定してください');
+  }
+  const base = style?.default;
+  if (base !== undefined && !isObject(base)) {
+    throw new TypeError('style.default には object を指定してください');
+  }
+  const fields = style?.fields;
+  checkFields(fieldNames, fields);
+  const resolved = new Map<TField, CharStyle | undefined>();
+  for (const field of fieldNames) {
+    const fieldStyle = fields?.[field];
+    if (fieldStyle === false) {
+      resolved.set(field, undefined);
+      continue;
+    }
+    const merged = merge(base ?? {}, fieldStyle ?? {});
+    validateStyle(merged);
+    resolved.set(field, merged);
+  }
+  return (field) => resolved.get(field);
+};
+
 /**
  * 字形の指定を扱う関数（型 CharStyle と同じ名前の値）
- *
- * - apply：文字列を、指定した字形にそろえる
- * - merge：2つの字形の指定を重ねる
  */
-export const CharStyle = { apply, merge };
+export const CharStyle = {
+  /**
+   * 文字列を、指定した字形にそろえる
+   *
+   * 1コードポイントずつ、chars の指定 → その字のクラスの指定 → そのまま、の順で決める。
+   * full は ASCII の字を U+FF01〜U+FF5E に、空白を U+3000 にする。half は変えない。
+   *
+   * @param text - そろえる文字列
+   * @param style - 字形の指定
+   * @returns そろえた文字列
+   * @throws {TypeError} text が文字列でない場合、または style が検査を満たさない場合
+   */
+  apply,
+  /**
+   * 2つの字形の指定を重ねる
+   *
+   * クラスは override を優先し、chars はキーごとにマージする（override にあるキーだけ上書き）。
+   * 結果の検査は apply で行う。
+   *
+   * @param base - 元の指定
+   * @param override - 上書きする指定
+   * @returns 重ねた指定
+   * @throws {TypeError} base・override、またはそれぞれの chars が object でない場合
+   */
+  merge,
+  /**
+   * 項目ごとの字形の指定を検査し、default とマージしておく
+   *
+   * 正規化器の create のときに呼ぶ。検査とマージはこの呼び出しで全部済ませ、返す関数は検査をしない。
+   * 項目の字形の指定は、fields の値が false なら undefined（当てない）、
+   * そうでなければ merge(default ?? {}, fields の値 ?? {}) を apply と同じ検査にかけたもの。
+   * style・default・fields の検査の TypeError のメッセージには style. の前置きが付く（正規化器のオプションの style をそのまま渡すため）。
+   * マージした指定の検査のメッセージは apply と同じ。
+   *
+   * @param fieldNames - 項目の名前の一覧
+   * @param style - 項目ごとの字形の指定
+   * @returns 項目の名前から、その項目に当てる字形の指定（当てないなら undefined）を返す関数
+   * @throws {TypeError} style・style.default・style.fields が object でない場合、style.fields のキーが fieldNames に無い場合、style.fields の値が object または false でない場合、またはマージした指定が apply の検査を満たさない場合
+   */
+  prepareFields,
+};

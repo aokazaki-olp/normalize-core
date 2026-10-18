@@ -15,10 +15,21 @@ it('公開面は guardedNfkc・HORIZONTAL_BAR_PATTERN・CharStyle', () => {
     NormalizeCore.CharStyle.merge({ digit: 'full' }, { alpha: 'full' }),
     { digit: 'full', alpha: 'full' },
   );
+  const styleOf = NormalizeCore.CharStyle.prepareFields(['code'], {
+    default: { digit: 'full' },
+  });
+  assert.deepEqual(styleOf('code'), { digit: 'full' });
   assert.equal(typeof NormalizeCore.HORIZONTAL_BAR_PATTERN, 'string');
 });
 
 it('型 CharStyle と値 CharStyle を同じ名前で使える', () => {
   const style: NormalizeCore.CharStyle = { symbol: 'full' };
+  const fieldStyle: NormalizeCore.FieldStyle<'code'> = {
+    fields: { code: style },
+  };
   assert.equal(NormalizeCore.CharStyle.apply('a-b', style), 'a－b');
+  assert.deepEqual(
+    NormalizeCore.CharStyle.prepareFields(['code'], fieldStyle)('code'),
+    style,
+  );
 });

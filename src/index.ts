@@ -7,4 +7,4 @@
 export { guardedNfkc } from './domain/guardedNfkc.ts';
 export { HORIZONTAL_BAR_PATTERN } from './domain/horizontalBar.ts';
 export { CharStyle } from './domain/charStyle.ts';
-export type { CharTarget, WidthMode } from './domain/charStyle.ts';
+export type { CharTarget, FieldStyle, WidthMode } from './domain/charStyle.ts';

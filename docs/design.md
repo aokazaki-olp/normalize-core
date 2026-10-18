@@ -80,7 +80,7 @@ export const CharStyle: {
 };
 ```
 
-- 型と値が同じ名前なので、`import { CharStyle } from '@arihirookazaki/normalize-core'` の1つで、型の注釈（`const style: CharStyle`）と関数の呼び出し（`CharStyle.apply(text, style)`）の両方に使える。型と値は同じモジュールで宣言しないと1つの名前にまとまらないので、`CharStyle` の型・関数・`FieldStyle` は `domain/charStyle.ts` にまとめて置く
+- 型と値が同じ名前なので、`import { CharStyle } from '@arihirookazaki/normalize-core'` の1つで、型の注釈（`const style: CharStyle`）と関数の呼び出し（`CharStyle.apply(text, style)`）の両方に使える。index.ts に実装を置かない（規約 §2.5）ので、`CharStyle` の型・関数・`FieldStyle` は `domain/charStyle.ts` にまとめて置き、index.ts は再公開だけにする
 - `apply` は、1コードポイントずつ、`chars` の指定 → その字のクラスの指定 → そのまま、の順で決める
 - `full` は、ASCII の字を U+FF01〜U+FF5E（コードポイントに 0xFEE0 を足す）に、空白を U+3000 にする。`half` は変えない
 - 省略したクラスは `half`
@@ -96,17 +96,18 @@ export const CharStyle: {
 - 検査とマージは呼んだときに全部済ませる。返す関数は検査をしない。マージした指定は新しい object なので、呼んだあとに利用者が `style` を書き換えても変わらない
 - 検査（満たさなければ `TypeError`）。`style`・`default`・`fields` の検査のメッセージには `style.` の前置きが付く（正規化器のオプションの `style` をそのまま渡すため）。マージした指定の検査のメッセージは `apply` と同じ
 
-| 検査                                                               | メッセージ                                                   |
-| ------------------------------------------------------------------ | ------------------------------------------------------------ |
-| `style` が（省略されていなければ）配列でない object                | `style には object を指定してください`                       |
-| `style.default` が（省略されていなければ）配列でない object        | `style.default には object を指定してください`               |
-| `style.fields` が（省略されていなければ）配列でない object         | `style.fields には object を指定してください`                |
-| `style.fields` のキーが `fieldNames` のどれか                      | `style.fields のキーには A・B を指定してください: x`         |
-| `style.fields` の値が（省略されていなければ）object または `false` | `style.fields.X には object または false を指定してください` |
-| マージした指定が `apply` の検査を満たす                            | `apply` と同じメッセージ（下記）                             |
+| 検査                                                                           | メッセージ                                                                         |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `style` が（省略されていなければ）配列でない object                            | `style には object を指定してください`                                             |
+| `style.default` が（省略されていなければ）配列でない object                    | `style.default には object を指定してください`                                     |
+| `style.fields` が（省略されていなければ）配列でない object                     | `style.fields には object を指定してください`                                      |
+| `style.fields` のキーが `fieldNames` のどれか                                  | `style.fields のキーには A・B を指定してください: x`                               |
+| `style.fields` の値が（省略されていなければ）object または `false`             | `style.fields.X には object または false を指定してください`                       |
+| `default`・`fields` の値の `chars` が（省略されていなければ）配列でない object | `base と override の chars には object を指定してください`（`merge` のメッセージ） |
+| マージした指定が `apply` の検査を満たす                                        | `apply` と同じメッセージ（下記）                                                   |
 
 - 検査の順は上の表のとおり。マージした指定の検査は `fieldNames` の順に1項目ずつ行う
-- 項目の一覧（`fieldNames`）は正規化器が持つ。正規化器は、項目の型に足した項目を一覧に足し忘れないよう、自分の側で網羅を検査する
+- 項目の一覧（`fieldNames`）は正規化器が持ち、`as const` のリテラルの配列で渡す（ただの `string[]` だと項目の名前の型が `string` に広がり、返す関数が一覧に無い名前にも `undefined` を返す）。正規化器は、項目の型に足した項目を一覧に足し忘れないよう、自分の側で網羅を検査する
 
 ### 検査（`apply` の入口で `TypeError`）
 

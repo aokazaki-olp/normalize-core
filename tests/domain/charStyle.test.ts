@@ -1,15 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-  applyCharStyle,
-  type CharStyle,
-  mergeCharStyle,
-} from '../../src/domain/charStyle.ts';
+import { CharStyle } from '../../src/domain/charStyle.ts';
 
 const ASCII_SAMPLE = '09AZaz!/:@[`{~ ';
 
-describe('applyCharStyle', () => {
+describe('CharStyle', () => {
+  it('キーは apply・merge', () => {
+    assert.deepEqual(Object.keys(CharStyle).toSorted(), ['apply', 'merge']);
+  });
+});
+
+describe('CharStyle.apply', () => {
   describe('クラスの指定', () => {
     const cases: [string, CharStyle, string, string][] = [
       ['digit: full', { digit: 'full' }, '0-9', '０-９'],
@@ -34,7 +36,7 @@ describe('applyCharStyle', () => {
     ];
     for (const [name, style, input, expected] of cases) {
       it(name, () => {
-        assert.equal(applyCharStyle(input, style), expected);
+        assert.equal(CharStyle.apply(input, style), expected);
       });
     }
   });
@@ -46,27 +48,27 @@ describe('applyCharStyle', () => {
         digit: 'full',
         chars: { '-': 'half', '1': 'ー' },
       };
-      assert.equal(applyCharStyle('1-2', style), 'ー-２');
+      assert.equal(CharStyle.apply('1-2', style), 'ー-２');
     });
 
     it('chars で full にする', () => {
-      assert.equal(applyCharStyle('a-b', { chars: { '-': 'full' } }), 'a－b');
+      assert.equal(CharStyle.apply('a-b', { chars: { '-': 'full' } }), 'a－b');
     });
 
     it('ASCII 以外のキーを置き換える', () => {
-      assert.equal(applyCharStyle('1ー2', { chars: { ー: '-' } }), '1-2');
+      assert.equal(CharStyle.apply('1ー2', { chars: { ー: '-' } }), '1-2');
     });
 
     it('サロゲートペアを1文字として扱う', () => {
       assert.equal(
-        applyCharStyle('𠮷野家𠮷', { chars: { '𠮷': '吉' } }),
+        CharStyle.apply('𠮷野家𠮷', { chars: { '𠮷': '吉' } }),
         '吉野家吉',
       );
-      assert.equal(applyCharStyle('𠮷', { alpha: 'full' }), '𠮷');
+      assert.equal(CharStyle.apply('𠮷', { alpha: 'full' }), '𠮷');
     });
 
     it('空文字列', () => {
-      assert.equal(applyCharStyle('', { digit: 'full' }), '');
+      assert.equal(CharStyle.apply('', { digit: 'full' }), '');
     });
 
     it('大量の入力（10万字）', () => {
@@ -79,7 +81,7 @@ describe('applyCharStyle', () => {
       const unit = '1a ー𠮷東!-9Z';
       const expected = '１ａ\u3000-吉東!-９Ｚ';
       assert.equal(
-        applyCharStyle(unit.repeat(10_000), style),
+        CharStyle.apply(unit.repeat(10_000), style),
         expected.repeat(10_000),
       );
     });
@@ -103,8 +105,8 @@ describe('applyCharStyle', () => {
     const input = '東京都 1-2ー3 #4〜5 Ab!';
     for (const [name, style] of styles) {
       it(name, () => {
-        const once = applyCharStyle(input, style);
-        assert.equal(applyCharStyle(once, style), once);
+        const once = CharStyle.apply(input, style);
+        assert.equal(CharStyle.apply(once, style), once);
       });
     }
   });
@@ -147,7 +149,7 @@ describe('applyCharStyle', () => {
     ];
     for (const [name, style] of cases) {
       it(name, () => {
-        assert.throws(() => applyCharStyle('a', style as any), TypeError);
+        assert.throws(() => CharStyle.apply('a', style as any), TypeError);
       });
     }
 
@@ -156,9 +158,9 @@ describe('applyCharStyle', () => {
         alpha: 'full',
         chars: { A: 'half', Ａ: '吉' },
       };
-      const once = applyCharStyle('AＡb', style);
+      const once = CharStyle.apply('AＡb', style);
       assert.equal(once, 'A吉ｂ');
-      assert.equal(applyCharStyle(once, style), once);
+      assert.equal(CharStyle.apply(once, style), once);
     });
 
     it('全角の字のキーは、そのクラスが half なら通る', () => {
@@ -166,30 +168,30 @@ describe('applyCharStyle', () => {
         alpha: 'half',
         chars: { Ａ: '吉', '\u3000': '＿' },
       };
-      const once = applyCharStyle('AＡ \u3000', style);
+      const once = CharStyle.apply('AＡ \u3000', style);
       assert.equal(once, 'A吉 ＿');
-      assert.equal(applyCharStyle(once, style), once);
+      assert.equal(CharStyle.apply(once, style), once);
     });
 
     it('値の ASCII の字のクラスが half なら通る', () => {
       assert.equal(
-        applyCharStyle('ー', { alpha: 'half', chars: { ー: 'a' } }),
+        CharStyle.apply('ー', { alpha: 'half', chars: { ー: 'a' } }),
         'a',
       );
     });
 
     for (const value of [undefined, null, 1, ['a']]) {
       it(`text が ${String(value)}`, () => {
-        assert.throws(() => applyCharStyle(value as any, {}), TypeError);
+        assert.throws(() => CharStyle.apply(value as any, {}), TypeError);
       });
     }
   });
 });
 
-describe('mergeCharStyle', () => {
+describe('CharStyle.merge', () => {
   it('クラスは override を優先する', () => {
     assert.deepEqual(
-      mergeCharStyle(
+      CharStyle.merge(
         { digit: 'full', alpha: 'full' },
         { digit: 'half', space: 'full' },
       ),
@@ -199,7 +201,7 @@ describe('mergeCharStyle', () => {
 
   it('chars はキーごとにマージする', () => {
     assert.deepEqual(
-      mergeCharStyle(
+      CharStyle.merge(
         { chars: { '-': 'full', ー: '-' } },
         { chars: { '-': 'half', '#': '＃' } },
       ),
@@ -209,7 +211,7 @@ describe('mergeCharStyle', () => {
 
   it('chars が片方にだけあれば、それを使う', () => {
     assert.deepEqual(
-      mergeCharStyle({ chars: { ー: '-' } }, { digit: 'full' }),
+      CharStyle.merge({ chars: { ー: '-' } }, { digit: 'full' }),
       {
         digit: 'full',
         chars: { ー: '-' },
@@ -219,25 +221,25 @@ describe('mergeCharStyle', () => {
 
   it('引数を変えない', () => {
     const base: CharStyle = { chars: { ー: '-' } };
-    mergeCharStyle(base, { chars: { '#': '＃' } });
+    CharStyle.merge(base, { chars: { '#': '＃' } });
     assert.deepEqual(base, { chars: { ー: '-' } });
   });
 
   for (const value of [undefined, null, 'full', []]) {
     it(`引数が ${JSON.stringify(value)}`, () => {
-      assert.throws(() => mergeCharStyle(value as any, {}), TypeError);
-      assert.throws(() => mergeCharStyle({}, value as any), TypeError);
+      assert.throws(() => CharStyle.merge(value as any, {}), TypeError);
+      assert.throws(() => CharStyle.merge({}, value as any), TypeError);
     });
   }
 
   for (const value of ['abc', ['a'], null, 1]) {
     it(`chars が ${JSON.stringify(value)}`, () => {
       assert.throws(
-        () => mergeCharStyle({ chars: value as any }, {}),
+        () => CharStyle.merge({ chars: value as any }, {}),
         TypeError,
       );
       assert.throws(
-        () => mergeCharStyle({}, { chars: value as any }),
+        () => CharStyle.merge({}, { chars: value as any }),
         TypeError,
       );
     });
@@ -245,7 +247,7 @@ describe('mergeCharStyle', () => {
 
   it('chars が undefined なら無いものとして扱う', () => {
     assert.deepEqual(
-      mergeCharStyle({ chars: undefined }, { chars: { ー: '-' } }),
+      CharStyle.merge({ chars: undefined }, { chars: { ー: '-' } }),
       { chars: { ー: '-' } },
     );
   });

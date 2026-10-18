@@ -3,14 +3,22 @@ import { it } from 'node:test';
 
 import * as NormalizeCore from '../src/index.ts';
 
-it('公開面は guardedNfkc・HORIZONTAL_BAR_PATTERN・applyCharStyle・mergeCharStyle', () => {
-  assert.deepEqual(Object.keys(NormalizeCore).sort(), [
+it('公開面は guardedNfkc・HORIZONTAL_BAR_PATTERN・CharStyle', () => {
+  assert.deepEqual(Object.keys(NormalizeCore).toSorted(), [
+    'CharStyle',
     'HORIZONTAL_BAR_PATTERN',
-    'applyCharStyle',
     'guardedNfkc',
-    'mergeCharStyle',
   ]);
   assert.equal(NormalizeCore.guardedNfkc('ﾋﾞﾙ①'), 'ビル①');
-  assert.equal(NormalizeCore.applyCharStyle('1', { digit: 'full' }), '１');
+  assert.equal(NormalizeCore.CharStyle.apply('1', { digit: 'full' }), '１');
+  assert.deepEqual(
+    NormalizeCore.CharStyle.merge({ digit: 'full' }, { alpha: 'full' }),
+    { digit: 'full', alpha: 'full' },
+  );
   assert.equal(typeof NormalizeCore.HORIZONTAL_BAR_PATTERN, 'string');
+});
+
+it('型 CharStyle と値 CharStyle を同じ名前で使える', () => {
+  const style: NormalizeCore.CharStyle = { symbol: 'full' };
+  assert.equal(NormalizeCore.CharStyle.apply('a-b', style), 'a－b');
 });

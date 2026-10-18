@@ -1,7 +1,7 @@
 /**
  * charStyle.ts
  *
- * @description 字形の指定（CharStyle）と、それを文字列にかける関数
+ * @description 字形の指定（CharStyle）の型と、それを扱う関数をまとめた値のオブジェクト
  */
 
 import { SINGLE_CODE_POINT } from './codePoint.ts';
@@ -170,7 +170,7 @@ const validateStyle = (style: unknown): Map<string, CharTarget> => {
  * @returns そろえた文字列
  * @throws {TypeError} text が文字列でない場合、または style が検査を満たさない場合
  */
-export const applyCharStyle = (text: string, style: CharStyle): string => {
+const apply = (text: string, style: CharStyle): string => {
   if (typeof text !== 'string') {
     throw new TypeError('text には string を指定してください');
   }
@@ -194,17 +194,14 @@ export const applyCharStyle = (text: string, style: CharStyle): string => {
  * 2つの字形の指定を重ねる
  *
  * クラスは override を優先し、chars はキーごとにマージする（override にあるキーだけ上書き）。
- * 結果の検査は applyCharStyle で行う。
+ * 結果の検査は apply で行う。
  *
  * @param base - 元の指定
  * @param override - 上書きする指定
  * @returns 重ねた指定
  * @throws {TypeError} base・override、またはそれぞれの chars が object でない場合
  */
-export const mergeCharStyle = (
-  base: CharStyle,
-  override: CharStyle,
-): CharStyle => {
+const merge = (base: CharStyle, override: CharStyle): CharStyle => {
   if (!isObject(base) || !isObject(override)) {
     throw new TypeError('base と override には object を指定してください');
   }
@@ -230,3 +227,11 @@ export const mergeCharStyle = (
   }
   return merged;
 };
+
+/**
+ * 字形の指定を扱う関数（型 CharStyle と同じ名前の値）
+ *
+ * - apply：文字列を、指定した字形にそろえる
+ * - merge：2つの字形の指定を重ねる
+ */
+export const CharStyle = { apply, merge };

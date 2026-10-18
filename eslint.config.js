@@ -7,10 +7,8 @@ import tseslint from 'typescript-eslint';
 const TS_FILES = ['**/*.ts', '**/*.mts'];
 const JS_FILES = ['**/*.js', '**/*.mjs'];
 const TEST_FILES = ['tests/**/*.ts', 'tests/**/*.mts'];
-const SRC_TS_FILES = ['src/**/*.ts', 'src/**/*.mts'];
 
 const RELATIVE_JS = '^\\.{1,2}/.*\\.m?js$';
-const NOT_RELATIVE = '^(?!\\.{1,2}/)';
 
 const SYNTAX_RULES = {
   curly: ['error', 'all'],
@@ -41,24 +39,6 @@ const SYNTAX_RULES = {
   ],
 };
 
-const RELATIVE_JS_IMPORT = {
-  regex: RELATIVE_JS,
-  message: '相対 import には実ファイルの拡張子を書く（規約 §2.2）',
-};
-
-const TS_RESTRICTED_SYNTAX = [
-  ...SYNTAX_RULES['no-restricted-syntax'],
-  {
-    selector: `ImportExpression > Literal[value=/${RELATIVE_JS.replaceAll('/', '\\/')}/]`,
-    message: RELATIVE_JS_IMPORT.message,
-  },
-  {
-    selector: 'ImportExpression > :not(Literal).source',
-    message:
-      '動的 import の指定子は文字列リテラルで書く（規約 §2.2 の検査を効かせるため）',
-  },
-];
-
 const UNUSED_VARS_OPTIONS = {
   args: 'all',
   argsIgnorePattern: '^_',
@@ -67,8 +47,93 @@ const UNUSED_VARS_OPTIONS = {
   caughtErrorsIgnorePattern: '^_',
 };
 
-const EXTERNAL_MESSAGE =
-  'src/ からは相対パス以外を import しない（docs/design.md）';
+const toSelectorRegex = (regex) => `/${regex.replaceAll('/', '\\/')}/`;
+
+const RELATIVE_JS_IMPORT = {
+  regex: RELATIVE_JS,
+  message: '相対 import には実ファイルの拡張子を書く（規約 §2.2）',
+};
+
+const TS_RESTRICTED_SYNTAX = [
+  ...SYNTAX_RULES['no-restricted-syntax'],
+  {
+    selector: `ImportExpression > Literal.source[value=${toSelectorRegex(RELATIVE_JS)}]`,
+    message: RELATIVE_JS_IMPORT.message,
+  },
+  {
+    selector: 'ImportExpression > :not(Literal).source',
+    message:
+      '動的 import の指定子は文字列リテラルで書く（規約 §2.2 とレイヤーの検査を効かせるため）',
+  },
+];
+
+const LAYERS = ['domain'];
+const layerFiles = (layer) => [`src/${layer}/**/*.ts`, `src/${layer}/**/*.mts`];
+
+// docs/design.md の「レイヤー」の節（表はこの LAYER_TABLE に持つ）。external は import してよい外部のパッケージ（'all' なら制限なし）
+const LAYER_TABLE = [
+  {
+    name: 'index.ts',
+    files: ['src/index.ts'],
+    allowed: ['domain'],
+    external: { packages: [], typesOnly: false },
+  },
+  {
+    name: 'domain',
+    files: layerFiles('domain'),
+    allowed: [],
+    external: { packages: [], typesOnly: false },
+  },
+];
+
+const layerBlock = ({ name, files, allowed, external }) => {
+  const forbidden = LAYERS.filter(
+    (layer) => layer !== name && !allowed.includes(layer),
+  );
+  const layerMessage = `${name} から import してよい層は ${allowed.join('・') || 'なし'}（docs/design.md）`;
+  const restricted = [
+    {
+      regex: [
+        ...forbidden.map((layer) => `(^|/)${layer}/`),
+        '^(\\.\\./)+index\\.m?ts$',
+      ].join('|'),
+      message: layerMessage,
+    },
+  ];
+  if (external !== 'all') {
+    const externalNames = external.packages.join('・');
+    restricted.push({
+      regex: `^(?!\\.{1,2}/${external.packages.map((packageName) => `|${packageName}$`).join('')})`,
+      message: `${name} から import してよい外部は ${externalNames === '' ? 'なし' : `${externalNames} だけ`}（docs/design.md）`,
+    });
+  }
+  if (external !== 'all' && external.typesOnly) {
+    for (const packageName of external.packages) {
+      restricted.push({
+        regex: `^${packageName}$`,
+        allowTypeImports: true,
+        message: `${name} から ${packageName} は型だけを import する（docs/design.md）`,
+      });
+    }
+  }
+  return {
+    files,
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        { patterns: [RELATIVE_JS_IMPORT, ...restricted] },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        ...TS_RESTRICTED_SYNTAX,
+        ...restricted.map(({ regex, message }) => ({
+          selector: `ImportExpression > Literal.source[value=${toSelectorRegex(regex)}]`,
+          message,
+        })),
+      ],
+    },
+  };
+};
 
 export default defineConfig(
   { ignores: ['dist/'] },
@@ -97,8 +162,12 @@ export default defineConfig(
     },
     rules: {
       ...SYNTAX_RULES,
-      'no-restricted-imports': ['error', { patterns: [RELATIVE_JS_IMPORT] }],
-      'no-restricted-syntax': TS_RESTRICTED_SYNTAX,
+      'no-restricted-imports': 'off',
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        { patterns: [RELATIVE_JS_IMPORT] },
+      ],
+      'no-restricted-syntax': ['error', ...TS_RESTRICTED_SYNTAX],
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/explicit-module-boundary-types': [
         'error',
@@ -123,27 +192,7 @@ export default defineConfig(
     },
   },
 
-  {
-    files: SRC_TS_FILES,
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            RELATIVE_JS_IMPORT,
-            { regex: NOT_RELATIVE, message: EXTERNAL_MESSAGE },
-          ],
-        },
-      ],
-      'no-restricted-syntax': [
-        ...TS_RESTRICTED_SYNTAX,
-        {
-          selector: `ImportExpression > Literal[value=/${NOT_RELATIVE.replaceAll('/', '\\/')}/]`,
-          message: EXTERNAL_MESSAGE,
-        },
-      ],
-    },
-  },
+  ...LAYER_TABLE.map(layerBlock),
 
   {
     files: TEST_FILES,

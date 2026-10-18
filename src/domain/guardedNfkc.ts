@@ -4,10 +4,10 @@
  * @description ガード付き NFKC（条件に当たる文字を残して NFKC をかける）
  */
 
+import { SINGLE_CODE_POINT } from './codePoint.ts';
 import { HORIZONTAL_BAR_PATTERN } from './horizontalBar.ts';
 
 const NUMBER_LETTER_OR_OTHER = /^[\p{Nl}\p{No}]$/u;
-const SINGLE_CODE_POINT = /^.$/su;
 const ASCII_DIGIT = /[0-9]/u;
 const FULLWIDTH_DIGIT = /^[０-９]$/u;
 const HORIZONTAL_BAR_CHAR = new RegExp(HORIZONTAL_BAR_PATTERN, 'u');

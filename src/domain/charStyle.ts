@@ -4,6 +4,8 @@
  * @description 字形の指定（CharStyle）と、それを文字列にかける関数
  */
 
+import { SINGLE_CODE_POINT } from './codePoint.ts';
+
 /** 字形の幅。half は変えない、full は全角にする */
 export type WidthMode = 'half' | 'full';
 /**
@@ -34,7 +36,6 @@ export interface CharStyle {
 type CharClass = 'digit' | 'alpha' | 'symbol' | 'space';
 
 const CLASSES: readonly CharClass[] = ['digit', 'alpha', 'symbol', 'space'];
-const SINGLE_CODE_POINT = /^.$/su;
 const DIGIT = /^[0-9]$/u;
 const ALPHA = /^[A-Za-z]$/u;
 const SYMBOL = /^[!-/:-@[-`{-~]$/u;
